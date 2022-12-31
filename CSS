@@ -1,0 +1,42 @@
+svg rect:hover {
+			  stroke: rgba(51, 51, 51, 0.05);
+			}
+			body {
+				text-align: center;
+  			font: 10px sans-serif;
+			}
+			.heat:hover {
+				stroke: #000;
+			}
+			hoverTip {
+  			width: 75px;
+  			height: 72px;
+  			border: 1px solid #ccc;
+  			border-radius: 3px;
+  			background: #f9f8f8;
+  			padding: 5px;
+  			text-align: center;
+        display:none;
+			}
+
+			.axis path,
+			.axis line {
+				fill: none;
+				stroke: #000;
+				shape-rendering: crispEdges;
+			}
+
+
+			.block {
+				width: 250px;
+				display: block;
+				background: #ccc;
+				padding: 10px;
+				font-size: 1.5em;
+			}
+			.box {
+				width: 1250px;
+				margin: 10px auto;
+				box-shadow: 2px 2px 5px 0px #333;
+				background: #fff;
+			}
