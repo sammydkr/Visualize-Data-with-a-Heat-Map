@@ -1,0 +1,183 @@
+window.onload = start()
+
+function start() 
+{
+	const json = fetch('https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/global-temperature.json')
+	.then(response=>response.json())
+	.then(response=>processResults(response))
+	.catch(err=>console.error(err))
+}
+
+function processResults(details) 
+{
+	const margin = 
+  {
+    top: 20, 
+    right: 0, 
+    bottom: 30, 
+    left: 85
+  }
+	const	width = 1220 - margin.left - margin.right
+	const	height = 500 - margin.top - margin.bottom
+
+	let x = d3.scaleLinear().range([0,width-50]);
+  let colorX = d3.scaleLinear().range([0,390]);
+	let y = d3.scaleLinear().range([height-100, 0]);
+
+	const months =(m)=>
+  {
+		const month=
+    {
+			1: 'January',
+			2: 'February',
+			3: 'March',
+			4: 'April',
+			5: 'May',
+			6: 'June',
+			7: 'July',
+			8: 'August',
+			9: 'September',
+			10: 'October',
+			11: 'November',
+			12: 'December'
+		}
+		return month[m]
+	}
+  
+	const buckets = 1, lowTemp = -7
+	const colors = 
+  [
+    "#08519c", "#3182bd", "#6baed6",
+    "#cfeef7","#ecfbff","#fffae9",
+    "#ffebb2","#fdd49e","#fdbb84",
+    "#fc8d59","#ef6548","#d7301f",
+    "#b30000","#7f0000"
+  ]
+
+	let xAxis = d3.axisBottom()
+		.scale(x)
+		.tickFormat(d3.format("-d"))
+		.ticks(15)
+
+	let legendAxis = d3.axisBottom()
+		.scale(colorX)
+		.tickFormat(d3.format("-d"))
+		.ticks(colors.length)
+
+	let yAxis = d3.axisLeft()
+		.scale(y)
+		.tickFormat((d)=>months(d))
+
+	let firstYear=d3.min(details.monthlyVariance,(d)=>d.year)
+	let xDet = d3.max(details.monthlyVariance,(d)=>(d.year))
+	let yDet = d3.max(details.monthlyVariance, (d=> d.month))
+	let xLegendMax = d3.max(details.monthlyVariance, (d=> d.variance))
+  let xLegendMin = d3.min(details.monthlyVariance, (d=> d.variance))
+
+	x.domain([firstYear,xDet])
+  y.domain([0,yDet]) 
+  colorX.domain([xLegendMin,xLegendMax])
+
+	d3.select('body')
+		.append('div')
+		.style('position','relative')
+		.style('width','100%')
+		.style('height','100px')
+		.html('<h1>Monthly Global Land-Surface Temperature</h1><h3>'+firstYear+'-'+
+      xDet+'</h3><h4>Temperatures are in Celsius and reported as anomalies relative'+
+      ' to the Jan 1951-Dec 1980 average.<br>Estimated Jan 1951-Dec 1980 absolute'+
+      'temperature &deg;C: 8.66 +/- 0.07</h4>')
+
+	let svg = d3.select("body")
+		.append('div')
+		.attr('class','box')
+		.append('svg')
+
+	let chart=d3.select('svg')
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+		.append("g")
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	const gridWidth = width / (xDet-firstYear)
+	const gridHeight = Math.floor(height / (yDet+2))
+
+	let handleMouseOver=(a)=> 
+  {
+		var coords = d3.mouse(chart.node());
+		d3.select('body')
+		  .transition(1000)
+		  .style('background',colorScale(a.variance));
+    
+		d3.select('hoverTip')
+      .style('display','block')
+		  .style('position','absolute')
+		  .html('<h3>'+(a.variance+details.baseTemperature).toPrecision(4)+
+		  '&deg;<br>'+a.variance+'&deg;<br>'+
+		  months(a.month)+'<br>'+a.year+'</h3>')
+		  .style("top", (coords[1]+50)+'px')
+		  .style("z-index", '10')
+		  .style("left", (coords[0])+'px')
+		  .transition(10)
+		  .style("background", colorScale(a.variance))
+	}
+  
+  var colorScale = d3.scaleQuantile()
+    .domain([ 
+      buckets, 
+      lowTemp, 
+      d3.max(
+        details.monthlyVariance, 
+        function (d) 
+        { 
+          return d.variance; 
+        }
+      )])
+    .range(colors);
+
+  chart.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + (height-80) + ")")
+    .call(xAxis);
+
+  chart.append("g")
+    .attr("class", "y axis")
+  .attr("transform", "translate(-20,0)")
+    .call(yAxis)
+
+  chart.append("g")
+    .attr("class", "legend axis")
+    .attr("transform", "translate(30," + (height-10) + ")")
+    .call(legendAxis)
+
+  chart.selectAll(".heat")
+		.data(details.monthlyVariance)
+		.enter()
+		.append('rect')
+		.attr('x',function(d) {return x(d.year)})
+    .attr('y',function(d) {return y(d.month)})
+	  .attr('width',gridWidth)
+		.attr('height',gridHeight)
+		.on("mouseover", handleMouseOver)
+		.transition().duration(500)
+		.style("fill", function(d) { return colorScale(d.variance); });
+  
+  chart.selectAll(".legend")
+	  .data(colors)
+	  .enter()
+	  .append('rect')
+	  .attr('width',30)
+	  .attr('height',30)
+	  .attr('x',function(d,e) {return e*30 })
+	  .attr('y',400)
+	  .transition().duration(2000)
+	  .style('fill',function(d) {return d})
+
+	chart.selectAll(".text")
+    .data(colors)
+   	.enter()
+		.append('text')
+	  .attr('x',function(d,e) {return e*30 })
+    .attr('y',640)
+
+}
